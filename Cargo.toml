@@ -1,0 +1,17 @@
+[package]
+name = "thread_map"
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+description = "Types that are simple and easy-to-use alternatives to the `std::thread_local` macro."
+repository = "https://github.com/pvillela/rust-thread-map/tree/main"
+documentation = "https://docs.rs/thread_map/latest/thread_map/"
+readme = "README.md"
+keywords = ["thread-local"]
+categories = ["concurrency"]
+exclude = ["benches/targets", "CHANGELOG.md", "*.sh", ".gitignore"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package.metadata.docs.rs]
+all-features = true
