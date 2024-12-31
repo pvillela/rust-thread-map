@@ -1,6 +1,6 @@
 [package]
 name = "thread_map"
-version = "0.0.2"
+version = "0.1.0"
 edition = "2021"
 license = "MIT"
 description = "Types that are simple and easy-to-use alternatives to the `std::thread_local` macro."

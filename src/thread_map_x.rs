@@ -1,39 +1,30 @@
-use crate::{ThreadMapLockError, POISONED_OBJECT_READ_LOCK, POISONED_OBJECT_WRITE_LOCK};
+use crate::{POISONED_OBJECT_READ_LOCK, POISONED_OBJECT_WRITE_LOCK, POISONED_THREAD_LOCK};
+
+use super::ThreadMapLockError;
 use std::{
-    cell::UnsafeCell,
     collections::HashMap,
-    fmt::Debug,
     mem::take,
     ops::DerefMut,
-    sync::RwLock,
+    sync::{Mutex, RwLock},
     thread::{self, ThreadId},
 };
 
-/// Wrapper to enable cell to be used as value in `HashMap`.
-struct UnsafeSyncCell<V>(UnsafeCell<V>);
-
-/// SAFETY:
-/// An instance is only accessed privately by [`ThreadMap`], in two ways:
-/// - Under a [`ThreadMap`] instance read lock, always in the same thread.
-/// - Under a [`ThreadMap`] instance write lock, from an arbitrary thread.
-unsafe impl<V> Sync for UnsafeSyncCell<V> {}
-
-impl<V: Debug> Debug for UnsafeSyncCell<V> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{:?}", unsafe { &*self.0.get() }))
-    }
-}
-
-/// This type encapsulates the association of [`ThreadId`]s to values of type `V`. It is a simple and easy-to-use alternative
+/// Like [`crate::ThreadMap`],
+/// this type encapsulates the association of [`ThreadId`]s to values of type `V` and is a simple and easy-to-use alternative
 /// to the [`std::thread_local`] macro and the [`thread_local`](https://crates.io/crates/thread_local) crate.
+/// It differs from [`crate::ThreadMap`] in that it contains a [`Mutex`] for each value, allowing the methods
+/// [`Self::fold`], [`Self::fold_values`], and [`Self::probe`]
+/// to run more efficiently when there are concurrent calls to the per-thread methods ([`Self::with`] and [`Self::with_mut`])
+/// by using fine-grained per-thread locking instead of acquiring an object-level write lock.
+/// On the other hand, the per-thread methods may run a bit slower as they require the acquision of the per-thread lock.
 #[derive(Debug)]
-pub struct ThreadMap<V> {
-    state: RwLock<HashMap<ThreadId, UnsafeSyncCell<V>>>,
+pub struct ThreadMapX<V> {
+    state: RwLock<HashMap<ThreadId, Mutex<V>>>,
     value_init: fn() -> V,
 }
 
-impl<V> ThreadMap<V> {
-    /// Creates a new [`ThreadMap`] instance, with `value_init` used to create the initial value for each thread.
+impl<V> ThreadMapX<V> {
+    /// Creates a new [`ThreadMapX`] instance, with `value_init` used to create the initial value for each thread.
     pub fn new(value_init: fn() -> V) -> Self {
         Self {
             state: RwLock::new(HashMap::new()),
@@ -49,10 +40,8 @@ impl<V> ThreadMap<V> {
         let tid = thread::current().id();
         match lock.get(&tid) {
             Some(c) => {
-                let v = c.0.get();
-                // SAFETY: call below is always done in the thread with `ThreadId` `tid`, under an instance-level read lock.
-                // all other access to the cell is done under an instance-level write lock.
-                let rv = unsafe { &mut *v };
+                let mut v = c.lock();
+                let rv = v.as_mut().expect(POISONED_THREAD_LOCK);
                 f(rv)
             }
             None => {
@@ -61,7 +50,7 @@ impl<V> ThreadMap<V> {
                 let mut lock = self.state.write().expect(POISONED_OBJECT_WRITE_LOCK);
                 let mut v0 = (self.value_init)();
                 let w = f(&mut v0);
-                lock.insert(tid, UnsafeSyncCell(UnsafeCell::new(v0)));
+                lock.insert(tid, Mutex::new(v0));
                 w
             }
         }
@@ -83,11 +72,12 @@ impl<V> ThreadMap<V> {
         let mut lock = self.state.write()?;
         let rmap = lock.deref_mut();
         let tmap = take(rmap);
-        let map = tmap
-            .into_iter()
-            .map(|(k, v)| (k, v.0.into_inner()))
-            .collect::<HashMap<_, _>>();
-        Ok(map)
+        tmap.into_iter()
+            .map(|(k, v)| {
+                let v = v.into_inner()?;
+                Ok((k, v))
+            })
+            .collect()
     }
 
     /// Folds every association in `self` into an accumulator (with initial value `z`) by applying an operation `f`,
@@ -98,19 +88,14 @@ impl<V> ThreadMap<V> {
     pub fn fold<W>(
         &self,
         z: W,
-        f: impl FnMut(W, (ThreadId, &V)) -> W,
+        mut f: impl FnMut(W, (ThreadId, &V)) -> W,
     ) -> Result<W, ThreadMapLockError> {
-        let w = self
-            .state
-            .write()?
-            .iter()
-            .map(|(tid, c)| {
-                let v = c.0.get();
-                // SAFETY: call below is always done under an instance-level write lock.
-                (*tid, unsafe { &*v })
-            })
-            .fold(z, f);
-        Ok(w)
+        self.state.read()?.iter().try_fold(z, |w, (tid, v)| {
+            let tid = *tid;
+            let mut mlock = v.lock()?;
+            let v = mlock.deref_mut();
+            Ok(f(w, (tid, v)))
+        })
     }
 
     /// Folds every value in `self` into an accumulator (with initial value `z`) by applying an operation `f`,
@@ -152,7 +137,7 @@ mod test {
         time::Duration,
     };
 
-    use super::ThreadMap;
+    use super::ThreadMapX;
 
     const NTHREADS: i32 = 20;
     const NITER: i32 = 10;
@@ -173,7 +158,7 @@ mod test {
 
     #[test]
     fn test() {
-        let tm = ThreadMap::new(value_init);
+        let tm = ThreadMapX::new(value_init);
 
         thread::scope(|s| {
             let tm = &tm;
