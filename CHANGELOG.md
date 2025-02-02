@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2025-02-02
+
+This release is backward compatible with the previous one.
+
+### Added
+
+- Expanded API with `get`, `set`, and `default` methods.
+- Added examples.
+- Added lib level doc comments.
+
+### Changed
+
+- Improved and expanded existing type level doc comments.
+
 ## [0.1.0] - 2024-12-31
 
 This release is backward compatible with the previous one.

@@ -1,4 +1,4 @@
-use crate::{ThreadMapLockError, POISONED_OBJECT_READ_LOCK, POISONED_OBJECT_WRITE_LOCK};
+use crate::{ThreadMapLockError, POISONED_OBJECT_RW_LOCK};
 use std::{
     cell::UnsafeCell,
     collections::HashMap,
@@ -26,6 +26,12 @@ impl<V: Debug> Debug for UnsafeSyncCell<V> {
 
 /// This type encapsulates the association of [`ThreadId`]s to values of type `V`. It is a simple and easy-to-use alternative
 /// to the [`std::thread_local`] macro and the [`thread_local`](https://crates.io/crates/thread_local) crate.
+///
+/// # Example
+///
+/// ```rust
+#[doc = include_str!("../examples/doc_thread_map.rs")]
+/// ```
 #[derive(Debug)]
 pub struct ThreadMap<V> {
     state: RwLock<HashMap<ThreadId, UnsafeSyncCell<V>>>,
@@ -44,8 +50,11 @@ impl<V> ThreadMap<V> {
     /// Invokes `f` mutably on the value associated with the [`ThreadId`] of the current thread and returns the invocation result.
     /// If there is no value associated with the current thread then the `value_init` argument of [`Self::new`] is used
     /// to instantiate an initial associated value before `f` is applied.
+    ///
+    /// # Panics
+    /// - If `self`'s lock is poisoned.
     pub fn with_mut<W>(&self, f: impl FnOnce(&mut V) -> W) -> W {
-        let lock = self.state.read().expect(POISONED_OBJECT_READ_LOCK);
+        let lock = self.state.read().expect(POISONED_OBJECT_RW_LOCK);
         let tid = thread::current().id();
         match lock.get(&tid) {
             Some(c) => {
@@ -58,7 +67,7 @@ impl<V> ThreadMap<V> {
             None => {
                 // Drop read lock and acquire write lock.
                 drop(lock);
-                let mut lock = self.state.write().expect(POISONED_OBJECT_WRITE_LOCK);
+                let mut lock = self.state.write().expect(POISONED_OBJECT_RW_LOCK);
                 let mut v0 = (self.value_init)();
                 let w = f(&mut v0);
                 lock.insert(tid, UnsafeSyncCell(UnsafeCell::new(v0)));
@@ -70,9 +79,31 @@ impl<V> ThreadMap<V> {
     /// Invokes `f` on the value associated with the [`ThreadId`] of the current thread and returns the invocation result.
     /// If there is no value associated with the current thread then the `value_init` argument of [`Self::new`] is used
     /// to instantiate an initial associated value before `f` is applied.
+    ///
+    /// # Panics
+    /// - If `self`'s lock is poisoned.
     pub fn with<W>(&self, f: impl FnOnce(&V) -> W) -> W {
         let g = |v: &mut V| f(v);
         self.with_mut(g)
+    }
+
+    /// Returns a clone of the value associated with the current thread.
+    ///
+    /// # Panics
+    /// - If `self`'s lock is poisoned.
+    pub fn get(&self) -> V
+    where
+        V: Clone,
+    {
+        self.with(|v| v.clone())
+    }
+
+    // Sets the value associated with the current thread to `v`.
+    ///
+    /// # Panics
+    /// - If `self`'s lock is poisoned.
+    pub fn set(&self, v: V) {
+        self.with_mut(|v0| *v0 = v);
     }
 
     /// Returns a [`HashMap`] with the values associated with each [`ThreadId`] key and clears `self`'s state.
@@ -143,48 +174,44 @@ impl<V> ThreadMap<V> {
     }
 }
 
+impl<V: Default> Default for ThreadMap<V> {
+    fn default() -> Self {
+        Self::new(V::default)
+    }
+}
+
 #[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod test {
+    use super::ThreadMap;
     use std::{
         collections::HashMap,
         thread::{self},
         time::Duration,
     };
 
-    use super::ThreadMap;
-
     const NTHREADS: i32 = 20;
     const NITER: i32 = 10;
     const SLEEP_MICROS: u64 = 10;
 
-    fn value_init() -> (i32, i32) {
-        (0, 0)
-    }
-
-    fn g((i0, v0): &mut (i32, i32), i: i32) {
+    fn update_value((i0, v0): &mut (i32, i32), i: i32) {
         *i0 = i;
         *v0 += i;
     }
 
-    fn read_value(p: &(i32, i32)) -> (i32, i32) {
-        (p.0, p.1)
-    }
-
     #[test]
-    fn test() {
-        let tm = ThreadMap::new(value_init);
+    fn test_lifecycle() {
+        let tm: ThreadMap<(i32, i32)> = ThreadMap::default();
 
         thread::scope(|s| {
             let tm = &tm;
             for i in 0..NTHREADS {
-                let f = move |p: &mut (i32, i32)| g(p, i);
                 s.spawn(move || {
                     for _ in 0..NITER {
                         thread::sleep(Duration::from_micros(SLEEP_MICROS));
-                        tm.with_mut(f);
+                        tm.with_mut(move |p: &mut (i32, i32)| update_value(p, i));
                     }
-                    let value = tm.with(read_value);
+                    let value = tm.get();
                     assert_eq!((i, i * NITER), value);
                 });
             }
@@ -192,9 +219,8 @@ mod test {
             let probed = tm.probe().unwrap().into_values().collect::<HashMap<_, _>>();
             println!("probed={probed:?}");
 
-            let f = move |p: &mut (i32, i32)| g(p, NTHREADS);
             for _ in 0..NITER {
-                tm.with_mut(f)
+                tm.with_mut(move |p: &mut (i32, i32)| update_value(p, NTHREADS))
             }
 
             let probed = tm.probe().unwrap().into_values().collect::<HashMap<_, _>>();
@@ -215,5 +241,24 @@ mod test {
 
         let dumped = tm.drain().unwrap().into_values().collect::<HashMap<_, _>>();
         assert_eq!(expected, dumped);
+    }
+
+    #[test]
+    fn test_set() {
+        let tm: ThreadMap<i32> = ThreadMap::default();
+
+        thread::scope(|s| {
+            let tm = &tm;
+            for i in 0..NTHREADS {
+                s.spawn(move || {
+                    tm.set(i);
+                    assert_eq!(i, tm.get());
+                });
+            }
+        });
+
+        let expected_sum = (0..NTHREADS).sum::<i32>();
+        let sum = tm.fold_values(0, |z, v| z + v).unwrap();
+        assert_eq!(expected_sum, sum);
     }
 }
