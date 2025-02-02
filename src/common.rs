@@ -4,11 +4,11 @@ use std::{
     sync::PoisonError,
 };
 
-pub(crate) const POISONED_OBJECT_READ_LOCK: &str = "poisoned object read lock";
-pub(crate) const POISONED_OBJECT_WRITE_LOCK: &str = "poisoned object write lock";
+pub(crate) const POISONED_OBJECT_RW_LOCK: &str = "poisoned object RwLock";
 pub(crate) const POISONED_THREAD_LOCK: &str = "poisoned thread lock";
 
-/// Error emitted by some [`crate::ThreadMap`] and [`crate::ThreadMapX`] methods when the object-level internal lock is poisoned.
+/// Error emitted by some [`ThreadMap`](crate::ThreadMap) and [`ThreadMapX`](crate::ThreadMapX) methods when
+/// the object-level internal lock is poisoned.
 #[derive(Debug)]
 pub struct ThreadMapLockError;
 
