@@ -5,7 +5,7 @@ It has no dependencies.
 
 ## Documentation
 
-See the [API documentation](https://docs.rs/thread_map/latest/thread_map/) on docs.rs and the source [repo](https://github.com/pvillela/rust-thread-map/tree/main).
+See the [API documentation](https://docs.rs/thread_map/latest/thread_map/) on docs.rs, which includes an overview and usage examples, and the source [repo](https://github.com/pvillela/rust-thread-map/tree/main).
 
 ## Support
 

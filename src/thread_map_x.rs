@@ -15,7 +15,7 @@ use std::{
 /// It differs from [`ThreadMap`](crate::ThreadMap) in that it contains a [`Mutex`] for each value, allowing the methods
 /// [`Self::fold`], [`Self::fold_values`], and [`Self::probe`]
 /// to run more efficiently when there are concurrent calls to the per-thread methods
-/// ([`Self::with`], [`Self::with_mut`], [`Self::get`])
+/// ([`Self::with`], [`Self::with_mut`], [`Self::get`], [`Self::set`])
 /// by using fine-grained per-thread locking instead of acquiring an object-level write lock.
 /// On the other hand, the per-thread methods may run a bit slower as they require the acquision of the per-thread lock.
 ///

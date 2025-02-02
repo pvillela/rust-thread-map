@@ -11,13 +11,13 @@ This release is backward compatible with the previous one.
 
 ### Added
 
-- Added examples.
-- Added lib doc comments.
 - Expanded API with `get`, `set`, and `default` methods.
+- Added examples.
+- Added lib level doc comments.
 
 ### Changed
 
-- Improved and expanded existing doc comments.
+- Improved and expanded existing type level doc comments.
 
 ## [0.1.0] - 2024-12-31
 
