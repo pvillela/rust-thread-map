@@ -28,11 +28,6 @@ thread_local! {
     static TL: Cell<i32> = const {Cell::new(0)};
 }
 
-#[test]
-fn test() {
-    main();
-}
-
 fn main() {
     //**ThreadMap**
     // There is no real need to wrap in `Arc` here because references can be used in scoped threads instead

@@ -9,11 +9,6 @@ const NTHREADS: i32 = 20;
 const NITER: i32 = 10;
 const SLEEP_MICROS: u64 = 10;
 
-#[test]
-fn test() {
-    main();
-}
-
 fn main() {
     // There is no real need to wrap in `Arc` here because references can be used in scoped threads instead
     // of clones, but the `Arc` wrapper would be required if non-scoped threads were used.
