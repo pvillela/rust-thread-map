@@ -25,12 +25,7 @@ const SLEEP_MICROS: u64 = 10;
 
 //**std::thread_local**
 thread_local! {
-    static TL: Cell<i32> = Cell::new(0);
-}
-
-#[test]
-fn test() {
-    main();
+    static TL: Cell<i32> = const {Cell::new(0)};
 }
 
 fn main() {
