@@ -4,12 +4,12 @@ export RUSTFLAGS="-Awarnings"
 
 # $1: number of repetitions 
 
-echo "----- ThreadMap to ThreadMapX comparison -- Started: `date +"%Y-%m-%d at %H:%M:%S"` -----"
+echo "----- ThreadMap to ThreadLocal comparison -- Started: `date +"%Y-%m-%d at %H:%M:%S"` -----"
 echo
 
 for ((i=1; i<=$1; i++)); do
     echo "*** i=$i ***" | tee /dev/stderr
-    cargo bench --bench tmu_tmx_bench --target-dir target/bench-target
+    cargo bench --bench tmu_tlc_bench --target-dir target/bench-target
 done
 
 echo ""

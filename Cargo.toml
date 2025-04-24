@@ -15,10 +15,15 @@ exclude = ["benches/targets", "CHANGELOG.md", "*.sh", ".gitignore"]
 
 [dev-dependencies]
 bench_diff = "1.0.3"
+thread_local = "1"
 
 [package.metadata.docs.rs]
 all-features = true
 
 [[bench]]
 name = "tmu_tmx_bench"
+harness = false
+
+[[bench]]
+name = "tmu_tlc_bench"
 harness = false
