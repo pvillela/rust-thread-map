@@ -1,9 +1,9 @@
-#![doc = include_str!("lib.md")]
+#![doc = include_str!("lib1.md")]
 //!
 //! ```rust
 #![doc = include_str!("../examples/doc_comparative.rs")]
 //! ```
-
+#![doc = include_str!("lib2.md")]
 #![deny(clippy::unwrap_used)]
 #![allow(clippy::type_complexity, clippy::new_without_default)]
 
