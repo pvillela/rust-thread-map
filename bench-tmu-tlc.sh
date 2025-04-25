@@ -7,11 +7,8 @@ export RUSTFLAGS="-Awarnings"
 echo "----- ThreadMap to ThreadLocal comparison -- Started: `date +"%Y-%m-%d at %H:%M:%S"` -----"
 echo
 
-for ((i=1; i<=$1; i++)); do
-    echo "*** i=$i ***" | tee /dev/stderr
-    cargo bench --bench tmu_tlc_bench --target-dir target/bench-target
-done
+cargo bench --bench tmu_tlc_bench --target-dir target/bench-target
 
-echo ""
+echo
 echo "Finished at: `date +"%H:%M:%S"`"
 

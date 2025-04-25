@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.3] - 2025-04-24
 
+### Added
+
+- Benchmark comparing  `ThreadMap` and `ThreadLocal`.
+
 ### Changed
 
 - Fixed the benchmark comparing `ThreadMap` and `ThreadMapX` from the previous version, as it was properly constructed.
+- Benchmarks section of library documentation.
 
 ## [1.0.2] - 2025-04-24
 

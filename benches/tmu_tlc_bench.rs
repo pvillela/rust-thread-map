@@ -2,8 +2,7 @@
 
 mod bench_support;
 
-use bench_diff::{LatencyUnit, bench_diff_with_status};
-use bench_support::{EXEC_COUNT, Tm, print_diff_out, tm_bench};
+use bench_support::{Tm, bench_compare};
 use std::{ops::Deref, sync::Mutex};
 use thread_local::ThreadLocal;
 use thread_map::{ThreadMap, ThreadMapLockError};
@@ -28,15 +27,13 @@ impl<V: Clone + Send + Default> Tm<V> for Tl<V> {
         Ok(w)
     }
 
-    fn type_name(&self) -> &str {
+    fn type_name(&self) -> &'static str {
         "ThreadLocal"
     }
 }
 
 fn main() {
-    let f1 = || tm_bench(ThreadMap::default());
-    let f2 = || tm_bench(Tl::default());
-
-    let out = bench_diff_with_status(LatencyUnit::Nano, f1, f2, EXEC_COUNT, |_, _| ());
-    print_diff_out(&out);
+    let ftm1 = || ThreadMap::default();
+    let ftm2 = || Tl::default();
+    bench_compare(ftm1, ftm2);
 }

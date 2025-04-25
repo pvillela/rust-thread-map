@@ -1,4 +1,4 @@
-use crate::{ThreadMapLockError, POISONED_OBJECT_RW_LOCK};
+use crate::{POISONED_OBJECT_RW_LOCK, ThreadMapLockError};
 use std::{
     cell::UnsafeCell,
     collections::HashMap,

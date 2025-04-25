@@ -2,8 +2,7 @@
 
 mod bench_support;
 
-use bench_diff::{LatencyUnit, bench_diff_with_status};
-use bench_support::{EXEC_COUNT, Tm, print_diff_out, tm_bench};
+use bench_support::{Tm, bench_compare};
 use thread_map::{ThreadMap, ThreadMapLockError, ThreadMapX};
 
 impl<V: Clone> Tm<V> for ThreadMapX<V> {
@@ -19,15 +18,13 @@ impl<V: Clone> Tm<V> for ThreadMapX<V> {
         self.fold_values(z, f)
     }
 
-    fn type_name(&self) -> &str {
+    fn type_name(&self) -> &'static str {
         "ThreadMapX"
     }
 }
 
 fn main() {
-    let f1 = || tm_bench(ThreadMap::default());
-    let f2 = || tm_bench(ThreadMapX::default());
-
-    let out = bench_diff_with_status(LatencyUnit::Nano, f1, f2, EXEC_COUNT, |_, _| ());
-    print_diff_out(&out);
+    let ftm1 = || ThreadMap::default();
+    let ftm2 = || ThreadMapX::default();
+    bench_compare(ftm1, ftm2);
 }
