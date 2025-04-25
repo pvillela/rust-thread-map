@@ -1,6 +1,6 @@
 [package]
 name = "thread_map"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2024"
 license = "MIT"
 description = "Types that are simple and easy-to-use alternatives to the `std::thread_local` macro."
@@ -9,17 +9,21 @@ documentation = "https://docs.rs/thread_map/latest/thread_map/"
 readme = "README.md"
 keywords = ["thread-local"]
 categories = ["concurrency"]
-exclude = ["benches/targets", "CHANGELOG.md", "*.sh", ".gitignore"]
+exclude = ["benches", "CHANGELOG.md", "*.sh", ".gitignore"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dev-dependencies]
 bench_diff = "1.0.3"
-sha2 = "0.10"
+thread_local = "1"
 
 [package.metadata.docs.rs]
 all-features = true
 
 [[bench]]
-name = "compare_bench"
+name = "tmu_tmx_bench"
+harness = false
+
+[[bench]]
+name = "tmu_tlc_bench"
 harness = false
