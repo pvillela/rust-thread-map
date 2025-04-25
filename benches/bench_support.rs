@@ -125,7 +125,7 @@ where
     print_params();
     println!();
 
-    for i in 1..NREPEATS {
+    for i in 1..=NREPEATS {
         eprintln!("*** i={i} ***");
         let out = bench_diff_with_status(LatencyUnit::Nano, f1, f2, EXEC_COUNT, |_, _| {
             println!(">>> bench_diff comparison: {type_name1} vs. {type_name2}; *** i={i} ***")
